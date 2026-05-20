@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ResumeAI — Instant Resume Review (Gemini)</title>
+<title>ResumeAI — Instant Resume Review</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
     --bg: #0a0a0a;
@@ -12,7 +13,6 @@
     --surface2: #181818;
     --border: #222222;
     --accent: #c8f135;
-    --accent2: #7fff6e;
     --text: #f0f0f0;
     --muted: #666;
     --danger: #ff5f5f;
@@ -27,8 +27,6 @@
     min-height: 100vh;
     overflow-x: hidden;
   }
-
-  /* Grid background */
   body::before {
     content: '';
     position: fixed;
@@ -40,257 +38,156 @@
     pointer-events: none;
     z-index: 0;
   }
-
   .wrap { max-width: 780px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
 
-  /* Header */
   header {
     padding: 40px 0 32px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 48px;
+    display: flex; align-items: center; gap: 12px;
   }
   .logo {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 10px;
     font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 22px;
-    letter-spacing: -0.5px;
+    font-weight: 800; font-size: 22px;
   }
   .logo-dot {
     width: 10px; height: 10px;
-    background: var(--accent);
-    border-radius: 50%;
+    background: var(--accent); border-radius: 50%;
     animation: pulse 2s infinite;
   }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
-  }
-
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
   .badge {
-    display: inline-block;
-    background: rgba(200,241,53,0.1);
-    color: var(--accent);
+    background: rgba(200,241,53,0.1); color: var(--accent);
     border: 1px solid rgba(200,241,53,0.25);
-    font-size: 10px;
-    padding: 3px 10px;
-    border-radius: 99px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-left: auto;
+    font-size: 10px; padding: 3px 10px; border-radius: 99px;
+    letter-spacing: .1em; text-transform: uppercase; margin-left: auto;
   }
 
-  /* Hero */
-  .hero { margin-bottom: 48px; }
+  .hero { margin-bottom: 40px; }
   .hero h1 {
     font-family: 'Syne', sans-serif;
-    font-size: clamp(32px, 6vw, 54px);
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -1.5px;
-    margin-bottom: 16px;
+    font-size: clamp(30px, 6vw, 52px);
+    font-weight: 800; line-height: 1.05;
+    letter-spacing: -1.5px; margin-bottom: 14px;
   }
   .hero h1 span { color: var(--accent); }
-  .hero p {
-    color: var(--muted);
-    font-size: 14px;
-    line-height: 1.8;
-    max-width: 500px;
-  }
+  .hero p { color: var(--muted); font-size: 14px; line-height: 1.8; max-width: 500px; }
 
-  /* Pricing pill */
-  .pricing-strip {
-    display: flex; gap: 12px; flex-wrap: wrap;
-    margin: 24px 0 40px;
-  }
+  .pricing-strip { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 36px; }
   .price-pill {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 99px;
-    padding: 8px 18px;
-    font-size: 12px;
-    color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 99px; padding: 7px 16px; font-size: 12px; color: var(--muted);
   }
   .price-pill strong { color: var(--text); }
 
-  /* Form */
-  .form-section { margin-bottom: 32px; }
-  label {
-    display: block;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
-  textarea {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    line-height: 1.7;
-    padding: 16px;
-    resize: vertical;
-    min-height: 260px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  textarea:focus { border-color: rgba(200,241,53,0.4); }
-  textarea::placeholder { color: var(--muted); }
 
-  .options-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin: 16px 0 24px;
+
+  label.field-label {
+    display: block; font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
   }
-  select {
+
+  /* Upload zone */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px; padding: 40px 24px;
+    text-align: center; cursor: pointer;
+    transition: all .2s; margin-bottom: 16px;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(200,241,53,.03); }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 32px; margin-bottom: 12px; }
+  .upload-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .upload-sub { font-size: 12px; color: var(--muted); }
+  .upload-success {
+    display: none; align-items: center; gap: 12px;
+    background: rgba(127,255,110,.06); border: 1px solid rgba(127,255,110,.2);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
     font-size: 13px;
-    padding: 12px 16px;
-    outline: none;
-    width: 100%;
-    cursor: pointer;
+  }
+  .upload-success.show { display: flex; }
+  .file-icon { font-size: 20px; }
+
+  .options-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 24px; }
+  select {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    padding: 12px 16px; outline: none; width: 100%; cursor: pointer;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
+    background-repeat: no-repeat; background-position: right 14px center;
   }
-  select:focus { border-color: rgba(200,241,53,0.4); }
+  select:focus { border-color: rgba(200,241,53,.4); }
 
-  /* API key input */
-  .api-row {
-    margin-bottom: 16px;
-  }
-  input[type=text], input[type=password] {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    padding: 12px 16px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input[type=text]:focus, input[type=password]:focus { border-color: rgba(200,241,53,0.4); }
-  input::placeholder { color: var(--muted); }
-
-  /* Button */
   .btn-primary {
-    width: 100%;
-    background: var(--accent);
-    color: #0a0a0a;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: 0.02em;
-    border: none;
-    border-radius: 8px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
+    width: 100%; background: var(--accent); color: #0a0a0a;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+    border: none; border-radius: 8px; padding: 16px;
+    cursor: pointer; transition: all .2s;
   }
   .btn-primary:hover { background: #d4f850; transform: translateY(-1px); }
   .btn-primary:active { transform: translateY(0); }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
-  /* Loading */
-  .loading {
-    display: none;
-    text-align: center;
-    padding: 48px 0;
-    color: var(--muted);
-    font-size: 13px;
+  .error-box {
+    background: rgba(255,95,95,.08); border: 1px solid rgba(255,95,95,.25);
+    border-radius: 8px; padding: 14px 18px; font-size: 13px; color: var(--danger);
+    margin-top: 16px; display: none;
   }
+
+  .loading { display: none; text-align: center; padding: 48px 0; color: var(--muted); font-size: 13px; }
   .loading.active { display: block; }
   .loader {
-    width: 32px; height: 32px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 16px;
+    width: 32px; height: 32px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .8s linear infinite; margin: 0 auto 16px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 12px; }
+  .loading-step { color: var(--muted); transition: color .3s; }
+  .loading-step.active { color: var(--accent); }
+  .loading-step.done { color: var(--good); }
 
-  /* Results */
   #results { display: none; margin-top: 40px; }
-  #results.visible { display: block; animation: fadeUp 0.4s ease; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  #results.visible { display: block; animation: fadeUp .4s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 
   .result-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 28px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
   }
-  .result-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 18px;
-  }
+  .result-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; }
 
-  /* Score ring */
-  .score-ring {
-    display: flex; align-items: center; gap: 14px;
-  }
+  .score-ring { display: flex; align-items: center; gap: 14px; }
   .ring-wrap { position: relative; width: 64px; height: 64px; }
   .ring-wrap svg { transform: rotate(-90deg); }
   .ring-bg { fill: none; stroke: var(--border); stroke-width: 4; }
   .ring-fill { fill: none; stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
-  .ring-num {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-size: 16px;
-    font-weight: 800;
-  }
+  .ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; }
   .score-label { font-size: 12px; color: var(--muted); line-height: 1.5; }
   .score-label strong { display: block; font-size: 22px; font-family: 'Syne', sans-serif; font-weight: 800; color: var(--text); }
 
-  /* Sections */
   .result-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-bottom: 14px;
   }
   .result-section-title {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 14px;
-    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .12em;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
   }
-  .dot-bad { width: 7px; height: 7px; background: var(--danger); border-radius: 50%; flex-shrink: 0; }
-  .dot-warn { width: 7px; height: 7px; background: var(--warn); border-radius: 50%; flex-shrink: 0; }
-  .dot-good { width: 7px; height: 7px; background: var(--good); border-radius: 50%; flex-shrink: 0; }
+  .dot-bad { width:7px;height:7px;background:var(--danger);border-radius:50%;flex-shrink:0; }
+  .dot-warn { width:7px;height:7px;background:var(--warn);border-radius:50%;flex-shrink:0; }
+  .dot-good { width:7px;height:7px;background:var(--good);border-radius:50%;flex-shrink:0; }
 
   .result-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-  .result-list li {
-    font-size: 13px;
-    line-height: 1.7;
-    color: #ccc;
-    padding-left: 16px;
-    position: relative;
-  }
-  .result-list li::before {
-    content: '—';
-    position: absolute; left: 0;
-    color: var(--muted);
-  }
+  .result-list li { font-size: 13px; line-height: 1.7; color: #ccc; padding-left: 16px; position: relative; }
+  .result-list li::before { content: '—'; position: absolute; left: 0; color: var(--muted); }
 
   .ats-bar-wrap { margin-top: 12px; }
   .ats-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
@@ -298,102 +195,92 @@
   .ats-bar-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
 
   .rewrite-box {
-    background: var(--surface2);
-    border: 1px solid rgba(200,241,53,0.15);
-    border-radius: 8px;
-    padding: 14px;
-    font-size: 12px;
-    line-height: 1.8;
-    color: #bbb;
-    white-space: pre-wrap;
-    margin-top: 8px;
+    background: var(--surface2); border: 1px solid rgba(200,241,53,.15);
+    border-radius: 8px; padding: 14px; font-size: 13px; line-height: 1.8;
+    color: #bbb; white-space: pre-wrap; margin-top: 8px;
   }
 
-  /* Footer */
+  .try-again-btn {
+    width: 100%; margin-top: 24px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px;
+    border-radius: 8px; padding: 12px; cursor: pointer; transition: all .2s;
+  }
+  .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+
   footer {
-    margin-top: 64px;
-    padding: 32px 0;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .error-box {
-    background: rgba(255,95,95,0.08);
-    border: 1px solid rgba(255,95,95,0.25);
-    border-radius: 8px;
-    padding: 14px 18px;
-    font-size: 13px;
-    color: var(--danger);
-    margin-top: 16px;
-    display: none;
+    margin-top: 64px; padding: 32px 0; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--muted);
   }
 
   @media (max-width: 520px) {
     .options-row { grid-template-columns: 1fr; }
-    .hero h1 { font-size: 30px; }
+    .hero h1 { font-size: 28px; }
+    .api-row { flex-direction: column; }
     footer { flex-direction: column; gap: 8px; text-align: center; }
   }
 </style>
 </head>
 <body>
-
 <div class="wrap">
+
   <header>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div class="logo">
-        <div class="logo-dot"></div>
-        ResumeAI
-      </div>
-      <span class="badge">Beta</span>
-    </div>
+    <div class="logo"><div class="logo-dot"></div>ResumeAI</div>
+    <span class="badge">Free Beta</span>
   </header>
 
   <section class="hero">
-    <h1>Get your resume<br><span>reviewed in seconds.</span></h1>
-    <p>Paste your resume below. Our AI gives you an ATS score, flags weak points, and rewrites your summary — instantly.</p>
-
+    <h1>Upload your resume.<br><span>Get reviewed instantly.</span></h1>
+    <p>Upload your PDF resume. Our AI gives you an ATS score, flags weak points, rewrites your summary — in seconds.</p>
     <div class="pricing-strip">
-      <div class="price-pill">✦ <strong>₹99</strong> per review</div>
-      <div class="price-pill">✦ <strong>ATS</strong> score included</div>
-      <div class="price-pill">✦ <strong>Instant</strong> feedback</div>
+      <div class="price-pill">✦ <strong>PDF upload</strong> supported</div>
+      <div class="price-pill">✦ <strong>ATS</strong> score</div>
+      <div class="price-pill">✦ <strong>Free</strong> to use</div>
     </div>
   </section>
 
-  <div class="api-row">
-    <label>Your Google Gemini API Key — <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);text-decoration:none;">Get it free here ↗</a></label>
-    <input type="password" id="api-key" placeholder="AIza..." autocomplete="off">
-  </div>
 
-  <div class="form-section">
-    <label>Paste your resume text</label>
-    <textarea id="resume-text" placeholder="Paste your full resume here — education, experience, skills, projects..."></textarea>
+
+  <!-- Upload zone -->
+  <div style="margin-bottom:8px;">
+    <label class="field-label">Upload your resume (PDF)</label>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept=".pdf,.txt" onchange="handleFile(this.files[0])">
+      <div class="upload-icon">📄</div>
+      <div class="upload-title">Drop your PDF here</div>
+      <div class="upload-sub">or click to browse · PDF or TXT · Max 5MB</div>
+    </div>
+    <div class="upload-success" id="upload-success">
+      <span class="file-icon">✅</span>
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--good)" id="file-name">resume.pdf</div>
+        <div style="font-size:11px;color:var(--muted)" id="file-pages"></div>
+      </div>
+    </div>
   </div>
 
   <div class="options-row">
     <div>
-      <label>Job role you're targeting</label>
+      <label class="field-label">Target role</label>
       <select id="job-role">
-        <option value="Software Engineer">Software Engineer</option>
-        <option value="Frontend Developer">Frontend Developer</option>
-        <option value="Data Analyst">Data Analyst</option>
-        <option value="Product Manager">Product Manager</option>
-        <option value="Business Analyst">Business Analyst</option>
-        <option value="Marketing Executive">Marketing Executive</option>
-        <option value="MBA / Management">MBA / Management</option>
-        <option value="Any / General">Any / General</option>
+        <option>Software Engineer</option>
+        <option>Frontend Developer</option>
+        <option>Data Analyst</option>
+        <option>Product Manager</option>
+        <option>Business Analyst</option>
+        <option>Marketing Executive</option>
+        <option>MBA / Management</option>
+        <option>Any / General</option>
       </select>
     </div>
     <div>
-      <label>Experience level</label>
+      <label class="field-label">Experience level</label>
       <select id="exp-level">
-        <option value="Fresher / Student">Fresher / Student</option>
-        <option value="0-2 years">0–2 years</option>
-        <option value="2-5 years">2–5 years</option>
-        <option value="5+ years">5+ years</option>
+        <option>Fresher / Student</option>
+        <option>0-2 years</option>
+        <option>2-5 years</option>
+        <option>5+ years</option>
       </select>
     </div>
   </div>
@@ -401,12 +288,16 @@
   <button class="btn-primary" id="review-btn" onclick="reviewResume()">
     Analyse My Resume →
   </button>
-
   <div class="error-box" id="error-box"></div>
 
   <div class="loading" id="loading">
     <div class="loader"></div>
-    Analysing your resume with AI...
+    <div>Analysing your resume...</div>
+    <div class="loading-steps">
+      <div class="loading-step" id="step1">📄 Reading your resume</div>
+      <div class="loading-step" id="step2">🔍 Checking ATS compatibility</div>
+      <div class="loading-step" id="step3">✍️ Writing your new summary</div>
+    </div>
   </div>
 
   <div id="results">
@@ -417,34 +308,28 @@
           <svg viewBox="0 0 64 64" width="64" height="64">
             <circle class="ring-bg" cx="32" cy="32" r="28"/>
             <circle class="ring-fill" id="ring-circle" cx="32" cy="32" r="28"
-              stroke-dasharray="175.9"
-              stroke-dashoffset="175.9"
-              stroke="#c8f135"/>
+              stroke-dasharray="175.9" stroke-dashoffset="175.9" stroke="#c8f135"/>
           </svg>
           <div class="ring-num" id="ring-num">0</div>
         </div>
         <div class="score-label">
-          <strong id="score-display">0/100</strong>
-          ATS Score
+          <strong id="score-display">0/100</strong>ATS Score
         </div>
       </div>
     </div>
 
-    <div class="result-section" id="section-issues">
-      <div class="result-section-title"><span class="dot-bad"></span> Critical issues</div>
+    <div class="result-section">
+      <div class="result-section-title"><span class="dot-bad"></span>Critical issues</div>
       <ul class="result-list" id="list-issues"></ul>
     </div>
-
-    <div class="result-section" id="section-improve">
-      <div class="result-section-title"><span class="dot-warn"></span> What to improve</div>
+    <div class="result-section">
+      <div class="result-section-title"><span class="dot-warn"></span>What to improve</div>
       <ul class="result-list" id="list-improve"></ul>
     </div>
-
-    <div class="result-section" id="section-good">
-      <div class="result-section-title"><span class="dot-good"></span> What's working</div>
+    <div class="result-section">
+      <div class="result-section-title"><span class="dot-good"></span>What's working</div>
       <ul class="result-list" id="list-good"></ul>
     </div>
-
     <div class="result-section">
       <div class="result-section-title">ATS keyword match</div>
       <div class="ats-bar-wrap">
@@ -452,63 +337,117 @@
         <div class="ats-bar-bg"><div class="ats-bar-fill" id="ats-bar" style="width:0%;background:var(--accent)"></div></div>
       </div>
     </div>
-
     <div class="result-section">
-      <div class="result-section-title"><span class="dot-good"></span> Rewritten summary</div>
+      <div class="result-section-title"><span class="dot-good"></span>Rewritten professional summary</div>
       <div class="rewrite-box" id="rewrite-box">—</div>
     </div>
+
+    <button class="try-again-btn" onclick="resetForm()">← Review another resume</button>
   </div>
 
   <footer>
-    <span>ResumeAI · Powered by Gemini</span>
-    <span>Your data never leaves your browser</span>
+    <span>ResumeAI · Powered by Groq + Llama</span>
+    <span>Your resume never leaves your browser</span>
   </footer>
 </div>
 
 <script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let extractedText = '';
+
+// Drag and drop
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+async function handleFile(file) {
+  if (!file) return;
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) { showError('File too large. Max 5MB.'); return; }
+
+  document.getElementById('file-name').textContent = file.name;
+  document.getElementById('file-pages').textContent = 'Reading file...';
+
+  try {
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let text = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n';
+      }
+      extractedText = text.trim();
+      document.getElementById('file-pages').textContent = `${pdf.numPages} page${pdf.numPages > 1 ? 's' : ''} · ${extractedText.length} characters extracted`;
+    } else {
+      extractedText = await file.text();
+      document.getElementById('file-pages').textContent = `${extractedText.length} characters`;
+    }
+
+    document.getElementById('upload-success').classList.add('show');
+    document.getElementById('upload-zone').style.display = 'none';
+    document.getElementById('error-box').style.display = 'none';
+  } catch (e) {
+    showError('Could not read file: ' + e.message);
+  }
+}
+
+function animateLoadingSteps() {
+  const steps = ['step1', 'step2', 'step3'];
+  steps.forEach((id, i) => {
+    setTimeout(() => {
+      if (i > 0) document.getElementById(steps[i-1]).classList.replace('active', 'done');
+      document.getElementById(id).classList.add('active');
+    }, i * 1200);
+  });
+}
+
 async function reviewResume() {
-  const apiKey = document.getElementById('api-key').value.trim();
-  const resumeText = document.getElementById('resume-text').value.trim();
+  const apiKey = "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";
   const jobRole = document.getElementById('job-role').value;
   const expLevel = document.getElementById('exp-level').value;
-  const errorBox = document.getElementById('error-box');
 
-  errorBox.style.display = 'none';
+  document.getElementById('error-box').style.display = 'none';
 
-  if (!apiKey) { showError('Please enter your Gemini API key. Get it free at aistudio.google.com'); return; }
-  if (!resumeText || resumeText.length < 100) { showError('Please paste your full resume text (at least a few lines).'); return; }
+  if (!extractedText || extractedText.length < 50) { showError('Please upload your resume first.'); return; }
 
   document.getElementById('review-btn').disabled = true;
   document.getElementById('loading').classList.add('active');
   document.getElementById('results').classList.remove('visible');
+  animateLoadingSteps();
 
   const prompt = `You are an expert resume reviewer for the Indian job market. Review the following resume for a ${expLevel} candidate targeting a ${jobRole} role.
 
-Respond ONLY with a valid JSON object in this exact format (no markdown, no extra text):
+Respond ONLY with a valid JSON object, no markdown, no extra text:
 {
   "ats_score": <number 0-100>,
   "ats_keyword_pct": <number 0-100>,
   "critical_issues": ["issue1", "issue2", "issue3"],
-  "improvements": ["improvement1", "improvement2", "improvement3", "improvement4"],
+  "improvements": ["tip1", "tip2", "tip3", "tip4"],
   "strengths": ["strength1", "strength2", "strength3"],
-  "rewritten_summary": "A 2-3 sentence rewritten professional summary for this candidate."
+  "rewritten_summary": "A strong 2-3 sentence professional summary rewritten for this candidate targeting ${jobRole}."
 }
 
-Resume:
-${resumeText}`;
+Resume text:
+${extractedText.slice(0, 4000)}`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
-        })
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama3-8b-8192',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1000
+      })
+    });
 
     if (!response.ok) {
       const err = await response.json();
@@ -516,14 +455,13 @@ ${resumeText}`;
     }
 
     const data = await response.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if (!raw) throw new Error('Empty response from Gemini. Try again.');
+    const raw = data.choices?.[0]?.message?.content?.trim();
+    if (!raw) throw new Error('Empty response. Please try again.');
     const clean = raw.replace(/```json|```/g, '').trim();
     const result = JSON.parse(clean);
-
     renderResults(result);
   } catch (e) {
-    showError('Error: ' + e.message);
+    showError('Error: ' + e.message + (e.message.includes('401') ? ' — Check your API key.' : ''));
   } finally {
     document.getElementById('review-btn').disabled = false;
     document.getElementById('loading').classList.remove('active');
@@ -538,9 +476,8 @@ function renderResults(r) {
   document.getElementById('ring-num').textContent = score;
 
   const circumference = 175.9;
-  const offset = circumference - (score / 100) * circumference;
   setTimeout(() => {
-    document.getElementById('ring-circle').style.strokeDashoffset = offset;
+    document.getElementById('ring-circle').style.strokeDashoffset = circumference - (score / 100) * circumference;
     const color = score >= 70 ? '#7fff6e' : score >= 50 ? '#ffb547' : '#ff5f5f';
     document.getElementById('ring-circle').style.stroke = color;
     document.getElementById('ring-num').style.color = color;
@@ -556,7 +493,6 @@ function renderResults(r) {
   populateList('list-improve', r.improvements || []);
   populateList('list-good', r.strengths || []);
   document.getElementById('rewrite-box').textContent = r.rewritten_summary || '—';
-
   document.getElementById('results').classList.add('visible');
   document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -564,7 +500,7 @@ function renderResults(r) {
 function populateList(id, items) {
   const ul = document.getElementById(id);
   ul.innerHTML = '';
-  items.forEach(item => {
+  (items || []).forEach(item => {
     const li = document.createElement('li');
     li.textContent = item;
     ul.appendChild(li);
@@ -575,6 +511,19 @@ function showError(msg) {
   const box = document.getElementById('error-box');
   box.textContent = msg;
   box.style.display = 'block';
+}
+
+function resetForm() {
+  extractedText = '';
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('upload-success').classList.remove('show');
+  document.getElementById('file-input').value = '';
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('error-box').style.display = 'none';
+  ['step1','step2','step3'].forEach(id => {
+    document.getElementById(id).classList.remove('active','done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>
 </body>
